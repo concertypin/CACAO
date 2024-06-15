@@ -1,0 +1,52 @@
+#!/usr/bin/env -S xonsh --no-rc
+import re
+from sys import argv
+from os import makedirs,path
+isfile=path.isfile
+isdir=path.isdir
+assert len(argv) >=2, "Please pass a domain or ip. ex:\ncreate-certificate 127.0.0.1\ncreate-certificate your.domain"
+
+# config:
+domain=argv[1]
+keylen=argv[2] if len(argv) > 2 else "4096"
+is_ip = re.search(r"\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b", domain) is not None
+keypath=f"certs/{domain}"
+rootca="rootCA.pem"
+rootca_priv="rootCA.key"
+
+certcrt=f"{keypath}/cert.crt"   # cert.crt  / Public SSL key
+certkey=f"{keypath}/cert.key"   # cert.key  / Private RSA 4096 key as SSL cert private key
+csrconf=f"{keypath}/csr.conf"   # cert.conf / OpenSSL .conf file for CSR
+certcsr=f"{keypath}/cert.csr"   # cert.csr  / Signing request
+ttl = 365                       # day
+assert not isdir(keypath), f"Directory {keypath} already exists."
+makedirs(keypath)
+
+with open(csrconf, "w") as f:
+    def translate(text, conversion_dict):
+        if not text:
+            return text
+        t = (text+"1")[:-1]
+        for key, value in conversion_dict.items():
+            t = t.replace(key, value)
+        return t
+    f.write(translate($(cat csr.conf).strip(), {"{DOMAIN}":domain,"{TYPE}":"IP" if is_ip else "DNS"}))
+
+if not (isfile(rootca) and isfile(rootca_priv)):
+    import subprocess
+    echo "Downloading CA cert..."
+    subprocess.run("./download-rootCA",shell=True,check=True)
+
+# Gen privkey
+echo "Generating private key..."
+openssl genrsa -out @(certkey) @(keylen)
+
+# Gen the csr
+echo "Generating CSR..."
+openssl req -new -key @(certkey) -config @(csrconf) -out @(certcsr)
+
+# Gen the cert from csr (with root CACert)
+echo "Generating cert..."
+openssl x509 -req -in @(certcsr) -CA @(rootca) -CAkey @(rootca_priv) -CAcreateserial -out @(certcrt) -days @(ttl) -sha256 -extensions v3_req -extfile @(csrconf)
+
+print(f"Done! Check out {keypath}.")

@@ -1,0 +1,20 @@
+#!/usr/bin/env -S xonsh --no-rc
+import json
+import subprocess
+
+out=$(bw get item <here>)
+payload=json.loads(out)
+sha512hash=payload['fields'][0]['value']
+data=json.loads(payload['notes'])
+
+print("Valdiation CA...")
+assert $(echo @(payload["notes"]) | sha512sum).split(" ")[0] == sha512hash, "bruh, hash unmatched"
+
+with open("rootCA.key","w") as f:
+    f.write(data["private"])
+
+with open("rootCA.pem","w") as f:
+    f.write(data["cert"])
+
+chmod 600 rootCA.key
+chmod 644 rootCA.pem

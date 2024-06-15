@@ -1,0 +1,9 @@
+**/*.conf
+**/*.pem
+**/*.key
+**/*.csr
+**/*.crt
+download-rootCA
+certs/
+!example.csr.conf
+

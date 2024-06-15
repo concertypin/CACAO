@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+openssl genrsa -out rootCA.key 4096
+chmod 600 rootCA.key
+openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 1024 -out rootCA.pem
+chmod 644 rootCA.pem
