@@ -1,4 +1,4 @@
-🍫 cacao: Certificate Authority Certification Automated with One-click
+🍫 cacao: CA Certification Automated with One-click
 ===================================================================
 
 Overview
